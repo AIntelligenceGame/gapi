@@ -12,25 +12,18 @@ var JwtKey = []byte("your_secret_key")
 
 // Claims 是JWT的有效负载
 type Claims struct {
-	Email    string `json:"email,omitempty"`
-	Username string `json:"username,omitempty"`
 	jwt.StandardClaims
+	Data map[string]interface{} `json:"data,omitempty"` // 存储任意数据
 }
 
 // 生成 Token
-func GenerateToken(email, username string) (string, error) {
+func GenerateToken(data map[string]interface{}) (string, error) {
 	expirationTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
-	}
-
-	if email != "" {
-		claims.Email = email
-	}
-	if username != "" {
-		claims.Username = username
+		Data: data,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -47,8 +40,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		var claims Claims
+		token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
 			return JwtKey, nil
 		})
 
@@ -58,12 +51,9 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 根据需要设置上下文
-		if claims.Email != "" {
-			c.Set("email", claims.Email)
-		}
-		if claims.Username != "" {
-			c.Set("username", claims.Username)
+		// 将 claims.Data 设置到上下文中，便于后续处理
+		for key, value := range claims.Data {
+			c.Set(key, value)
 		}
 
 		c.Next()

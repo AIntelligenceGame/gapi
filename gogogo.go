@@ -9,10 +9,40 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 自定一个需要被 鉴权 结构体
+type UserLoginRequest struct {
+	Email    string `json:"email,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password"`
+}
+
+func (r *UserLoginRequest) GetCredentials() map[string]interface{} {
+	return map[string]interface{}{
+		"email":    r.Email,
+		"username": r.Username,
+		"password": r.Password,
+	}
+}
+func CustomAuthenticate(credentials map[string]interface{}) (bool, error) {
+	email := credentials["email"].(string)
+	username := credentials["username"].(string)
+	password := credentials["password"].(string)
+
+	// 实际验证逻辑（比如数据库查询）
+	if username == "" || email == "" || password != "password" {
+		return false, nil
+	}
+	return true, nil
+}
+
 func main() {
 	r := gin.Default()
 
-	r.POST("/login", login.Login)
+	r.POST("/login", func(c *gin.Context) {
+		req := &UserLoginRequest{}
+		login.Login(c, req, CustomAuthenticate)
+	})
+
 	r.POST("/refresh", login.RefreshToken)
 
 	// 受保护路由

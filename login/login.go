@@ -8,27 +8,31 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 请求结构体接口
+type LoginRequest interface {
+	GetCredentials() map[string]interface{}
+}
+
 // 登录接口
-func Login(c *gin.Context) {
-	var creds struct {
-		Email    string `json:"email,omitempty"`
-		Username string `json:"username,omitempty"`
-		Password string `json:"password"`
-	}
-	if err := c.ShouldBindJSON(&creds); err != nil {
+func Login(c *gin.Context, req LoginRequest, validate func(credentials map[string]interface{}) (bool, error)) {
+	// 解析请求体
+	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// 这里使用硬编码的用户信息进行验证，实际中请替换为数据库查询
-	// 验证逻辑，使用邮箱或用户名
-	if (creds.Email == "" && creds.Username == "") || creds.Password != "password" {
+	// 获取请求字段
+	credentials := req.GetCredentials()
+
+	// 调用验证函数
+	isAuthenticated, err := validate(credentials)
+	if err != nil || !isAuthenticated {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	// 生成 Token
-	token, err := auth.GenerateToken(creds.Email, creds.Username)
+	token, err := auth.GenerateToken(credentials)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
 		return
@@ -45,8 +49,8 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	claims := &auth.Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	var claims auth.Claims
+	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
 		return auth.JwtKey, nil
 	})
 
@@ -55,10 +59,9 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// 生成新的 Token，保留原有的用户名和邮箱
-	newToken, err := auth.GenerateToken(claims.Username, claims.Email)
+	newToken, err := auth.GenerateToken(claims.Data)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
 		return
 	}
 
