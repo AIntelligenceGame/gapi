@@ -23,16 +23,16 @@ func (r *UserLoginRequest) GetCredentials() map[string]interface{} {
 		"password": r.Password,
 	}
 }
-func CustomAuthenticate(credentials map[string]interface{}) (bool, error) {
+func CustomAuthenticate(credentials map[string]interface{}) login.AuthResult {
 	email := credentials["email"].(string)
 	username := credentials["username"].(string)
 	password := credentials["password"].(string)
 
 	// 实际验证逻辑（比如数据库查询）
 	if username == "" || email == "" || password != "password" {
-		return false, nil
+		return login.AuthResult{IsAuthenticated: false, StatusCode: http.StatusNotFound, ErrorMessage: "User not found"}
 	}
-	return true, nil
+	return login.AuthResult{IsAuthenticated: true}
 }
 
 func main() {

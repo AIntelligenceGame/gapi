@@ -8,13 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 认证结果和状态码
+type AuthResult struct {
+	IsAuthenticated bool
+	StatusCode      int
+	ErrorMessage    string
+}
+
 // 请求结构体接口
 type LoginRequest interface {
 	GetCredentials() map[string]interface{}
 }
 
 // 登录接口
-func Login(c *gin.Context, req LoginRequest, validate func(credentials map[string]interface{}) (bool, error)) {
+func Login(c *gin.Context, req LoginRequest, validate func(credentials map[string]interface{}) AuthResult) {
 	// 解析请求体
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -25,9 +32,9 @@ func Login(c *gin.Context, req LoginRequest, validate func(credentials map[strin
 	credentials := req.GetCredentials()
 
 	// 调用验证函数
-	isAuthenticated, err := validate(credentials)
-	if err != nil || !isAuthenticated {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	authResult := validate(credentials)
+	if !authResult.IsAuthenticated {
+		c.JSON(authResult.StatusCode, gin.H{"error": authResult.ErrorMessage})
 		return
 	}
 
