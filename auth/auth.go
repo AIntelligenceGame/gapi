@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -34,6 +35,11 @@ func GenerateToken(data map[string]interface{}) (string, error) {
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			tokenString = c.Query("token")
+			log.Println("WebSocket url:", tokenString)
+		}
+
 		if tokenString == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Request does not contain an access token"})
 			c.Abort()
