@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -37,7 +36,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
 			tokenString = c.Query("token")
-			log.Println("WebSocket url:", tokenString)
 		}
 
 		if tokenString == "" {
