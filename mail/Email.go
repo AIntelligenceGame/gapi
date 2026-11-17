@@ -15,6 +15,12 @@ type SMTPConfig struct {
 	User string
 	Auth string
 	Addr string
+	// TLSMode 加密方式(可留空,留空按端口推断):
+	//
+	//	"starttls" —— 明文握手后升级加密(QQ 587 / 163 25);
+	//	"tls"     —— 隐式 TLS,连接即加密(QQ/163 465);
+	//	"none"    —— 不强制加密(服务器不支持 STARTTLS 时使用)。
+	TLSMode string
 }
 
 // EmailParams 结构体包含发送邮件所需的参数
@@ -35,7 +41,7 @@ func Email(params EmailParams) error {
 	m.SetHeader("Subject", params.Value)
 
 	// 邮件正文内容
-	m.SetBody("text/html", fmt.Sprintf("【验证码】:<i>%s</i>", params.Code))
+	m.SetBody("text/html", fmt.Sprintf("[验证码]: <i>%s</i>", params.Code))
 
 	// 创建邮件发送器，配置 SMTP 服务器
 	d := gomail.NewDialer(params.SMTPInfo.Host, params.SMTPInfo.Port, params.SMTPInfo.User, params.SMTPInfo.Auth)
